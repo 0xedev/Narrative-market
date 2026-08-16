@@ -1,0 +1,14 @@
+node_modules
+.next
+dist
+out
+coverage
+cache
+artifacts
+lib
+broadcast
+.env
+.env.*
+!.env.example
+.DS_Store
+

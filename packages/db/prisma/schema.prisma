@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum QuestionStatus {
+  PENDING
+  ACTIVE
+  RESOLVED
+}
+
+model User {
+  id          String   @id @default(cuid())
+  address     String   @unique
+  displayName String?
+  totalHeld   BigInt   @default(0)
+  totalMined  Decimal  @default(0) @db.Decimal(78, 0)
+  takeovers   Int      @default(0)
+  wins        Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  answers     Answer[]
+  history     TakeoverHistory[]
+}
+
+model Question {
+  id                  String         @id
+  text                String
+  proposerAddress     String
+  curatorAddress      String
+  startsAt            DateTime
+  endsAt              DateTime
+  status              QuestionStatus @default(PENDING)
+  winningAnswerHash   String?
+  winningHolder       String?
+  winningHoldSeconds  BigInt?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  answers             Answer[]
+  history             TakeoverHistory[]
+}
+
+model Answer {
+  id            String   @id @default(cuid())
+  questionId   String
+  holderAddress String
+  answerHash   String
+  answerText   String
+  normalized   String
+  submittedAt DateTime @default(now())
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  holder   User     @relation(fields: [holderAddress], references: [address])
+
+  @@unique([questionId, answerHash, holderAddress])
+  @@index([questionId, answerHash])
+}
+
+model TakeoverHistory {
+  id              String   @id @default(cuid())
+  questionId      String
+  holderAddress   String
+  previousHolder  String?
+  answerHash      String
+  priceWei        BigInt
+  timestamp       DateTime
+  holdSeconds     BigInt?
+  txHash          String
+  logIndex        Int
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  holder   User     @relation(fields: [holderAddress], references: [address])
+
+  @@unique([txHash, logIndex])
+  @@index([questionId, timestamp])
+  @@index([questionId, answerHash])
+}
+
+model OnchainEvent {
+  id          String   @id @default(cuid())
+  txHash      String
+  logIndex    Int
+  blockNumber BigInt
+  eventName   String
+  payload     Json
+  createdAt   DateTime @default(now())
+
+  @@unique([txHash, logIndex])
+}
+
