@@ -26,7 +26,7 @@ export function TakeoverModal({ onClose, price }: { onClose: () => void; price: 
       const registration = await fetch("/api/answers/submit", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ questionId, answer })
+        body: JSON.stringify({ questionId, answer, holderAddress: address })
       });
       if (!registration.ok) throw new Error("Could not register the answer.");
       const { answerHash } = await registration.json() as { answerHash: `0x${string}` };
