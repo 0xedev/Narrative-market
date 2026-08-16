@@ -6,6 +6,7 @@
     "dev": "pnpm --filter @narrative/web dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
+    "check:mechanics": "node scripts/check-mechanics.mjs",
     "db:generate": "pnpm --filter @narrative/db prisma generate",
     "db:push": "pnpm --filter @narrative/db prisma db push",
     "indexer": "pnpm --filter @narrative/indexer dev"
