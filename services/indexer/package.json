@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@narrative/db": "workspace:*",
+    "@prisma/client": "^5.20.0",
     "viem": "^2.21.0"
   },
   "devDependencies": {

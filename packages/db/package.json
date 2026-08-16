@@ -5,6 +5,8 @@
     "prisma": "prisma",
     "typecheck": "tsc --noEmit"
   },
+  "main": "src/index.ts",
+  "exports": { ".": "./src/index.ts" },
   "dependencies": {
     "@prisma/client": "^5.20.0"
   },
