@@ -15,12 +15,13 @@ const standings = [
   ["@SilentDao", "The community decides.", "00:52:44", "◆"]
 ];
 const contractAddress = process.env.NEXT_PUBLIC_NARRATIVE_THRONE_ADDRESS as `0x${string}` | undefined;
+const readAddress = (contractAddress ?? "0x0000000000000000000000000000000000000000") as `0x${string}`;
 
 export default function Home() {
   const [showTakeover, setShowTakeover] = useState(false);
   const [seconds, setSeconds] = useState(151);
   const { data: onchainPrice } = useReadContract({
-    address: contractAddress,
+    address: readAddress,
     abi: narrativeThroneAbi,
     functionName: "getCurrentPrice",
     query: { enabled: Boolean(contractAddress), refetchInterval: 12_000 }
