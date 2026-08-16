@@ -41,6 +41,7 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
     mapping(address => uint256) public ethCredits;
     mapping(bytes32 => mapping(bytes32 => uint256)) public answerHoldSeconds;
     mapping(bytes32 => bytes32) public leadingAnswer;
+    mapping(bytes32 => address) public leadingHolder;
     mapping(bytes32 => uint256) public leadingHoldSeconds;
     mapping(bytes32 => bool) public questionResolved;
 
@@ -104,7 +105,7 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
         bytes32 previousQuestion = activeQuestionId;
         _settleHolder();
         bytes32 winner = leadingAnswer[previousQuestion];
-        address winnerHolder = currentHolder;
+        address winnerHolder = leadingHolder[previousQuestion];
         questionResolved[previousQuestion] = true;
         emit QuestionResolved(previousQuestion, winner, winnerHolder, leadingHoldSeconds[previousQuestion]);
 
@@ -248,6 +249,7 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
             if (total > leadingHoldSeconds[activeQuestionId]) {
                 leadingHoldSeconds[activeQuestionId] = total;
                 leadingAnswer[activeQuestionId] = currentAnswerHash;
+                leadingHolder[activeQuestionId] = currentHolder;
             }
         }
     }

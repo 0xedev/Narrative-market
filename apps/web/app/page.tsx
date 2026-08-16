@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatEther } from "viem";
+import { useReadContract } from "wagmi";
 import { WalletButton } from "../components/WalletButton";
 import { TakeoverModal } from "../components/TakeoverModal";
+import { narrativeThroneAbi } from "../lib/abi";
 
 const standings = [
   ["@OxKingOfTheNet", "Decentralized communities.", "05:42:18", "♛"],
@@ -11,10 +14,17 @@ const standings = [
   ["@PacketPioneer", "Infrastructure layer.", "01:34:21", "✦"],
   ["@SilentDao", "The community decides.", "00:52:44", "◆"]
 ];
+const contractAddress = process.env.NEXT_PUBLIC_NARRATIVE_THRONE_ADDRESS as `0x${string}` | undefined;
 
 export default function Home() {
   const [showTakeover, setShowTakeover] = useState(false);
   const [seconds, setSeconds] = useState(151);
+  const { data: onchainPrice } = useReadContract({
+    address: contractAddress,
+    abi: narrativeThroneAbi,
+    functionName: "getCurrentPrice",
+    query: { enabled: Boolean(contractAddress), refetchInterval: 12_000 }
+  });
 
   useEffect(() => {
     const timer = setInterval(() => setSeconds((value) => value <= 0 ? 3600 : value - 1), 1000);
@@ -22,6 +32,7 @@ export default function Home() {
   }, []);
 
   const timer = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+  const price = onchainPrice ? formatEther(onchainPrice) : "0.0012";
 
   return <main className="shell">
     <header className="topbar">
@@ -38,12 +49,12 @@ export default function Home() {
           <div className="panel activity"><div className="section-head"><h2>⚡ Activity feed</h2><span>Live on Robinhood Chain</span></div><div className="activity-row"><div className="activity-item"><b>@OxKingOfTheNet</b> dethroned @WebWeaver <span className="muted">· 5m ago</span></div><div className="activity-item"><b>@PacketPioneer</b> took @NodeNomad <span className="muted">· 18m ago</span></div><div className="activity-item"><b>@SilentDao</b> challenged @ChainGardener <span className="muted">· 37m ago</span></div></div></div>
         </div>
         <aside className="right">
-          <div className="panel throne-panel"><div className="price-label">Takeover price</div><div className="price">0.0012 <small>ETH</small></div><div className="price-note">Pay to surpass the current King.</div><div className="timer-wrap"><div className="timer"><strong>{timer}</strong><span>price decays</span></div><div><strong>Strike before the floor.</strong><div className="muted">The price decays independently from NARR emissions.</div></div></div><button className="takeover" onClick={() => setShowTakeover(true)}>♛ Take the Throne</button><div className="muted" style={{ textAlign: "center", marginTop: 12, fontSize: ".8rem" }}>You become the new King if your answer holds the longest.</div></div>
+          <div className="panel throne-panel"><div className="price-label">Takeover price</div><div className="price">{price} <small>ETH</small></div><div className="price-note">Pay to surpass the current King.</div><div className="timer-wrap"><div className="timer"><strong>{timer}</strong><span>price decays</span></div><div><strong>Strike before the floor.</strong><div className="muted">The price decays independently from NARR emissions.</div></div></div><button className="takeover" onClick={() => setShowTakeover(true)}>♛ Take the Throne</button><div className="muted" style={{ textAlign: "center", marginTop: 12, fontSize: ".8rem" }}>You become the new King if your answer holds the longest.</div></div>
           <div className="panel standings"><div className="section-head"><h2>♛ Live standings</h2><span>Hold time⌄</span></div>{standings.map(([name, answer, hold, icon], index) => <div className="standing" key={name}><div className="rank">{index + 1}</div><div className="mini-avatar">{icon}</div><div><div className="standing-name">{name}</div><div className="standing-answer">{answer}</div></div><div className="hold">{hold}</div></div>)}<button className="full-leaderboard">View full leaderboard →</button></div>
           <div className="notice"><strong>Hold the longest. Rule today.</strong>A new King every day. One answer to rule them all. Come back tomorrow and take your shot.</div>
         </aside>
       </div>
     </section>
-    {showTakeover && <TakeoverModal price="0.0012" onClose={() => setShowTakeover(false)} />}
+    {showTakeover && <TakeoverModal price={price} onClose={() => setShowTakeover(false)} />}
   </main>;
 }
