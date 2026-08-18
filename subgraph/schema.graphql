@@ -1,0 +1,80 @@
+type Holder @entity(immutable: false) {
+  id: ID!
+  address: Bytes!
+  totalHeldSeconds: BigInt!
+  takeovers: BigInt!
+  wins: BigInt!
+  rewardsMinted: BigInt!
+  payoutsReceived: BigInt!
+}
+
+type Question @entity(immutable: false) {
+  id: ID!
+  uri: String!
+  proposer: Bytes!
+  curator: Bytes!
+  status: String!
+  startsAt: BigInt!
+  endsAt: BigInt!
+  active: Boolean!
+  lastTakeoverAt: BigInt!
+  currentHolder: Holder
+  currentAnswer: Answer
+  winningAnswer: Answer
+  winningHolder: Bytes
+  winningHoldSeconds: BigInt
+  answers: [Answer!]! @derivedFrom(field: "question")
+  takeovers: [Takeover!]! @derivedFrom(field: "question")
+}
+
+type Answer @entity(immutable: false) {
+  id: ID!
+  hash: Bytes!
+  uri: String!
+  question: Question!
+  holder: Holder!
+  holdSeconds: BigInt!
+  firstSeenAt: BigInt!
+  lastSeenAt: BigInt!
+}
+
+type Takeover @entity(immutable: false) {
+  id: ID!
+  question: Question!
+  newHolder: Holder!
+  previousHolder: Holder
+  answer: Answer!
+  price: BigInt!
+  timestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Proposal @entity(immutable: false) {
+  id: ID!
+  questionId: Bytes!
+  proposer: Bytes!
+  uri: String!
+  timestamp: BigInt!
+}
+
+type Reward @entity(immutable: false) {
+  id: ID!
+  question: Question!
+  holder: Holder!
+  amount: BigInt!
+  timestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Payout @entity(immutable: false) {
+  id: ID!
+  question: Question!
+  previousHolder: Holder
+  treasury: Bytes!
+  curator: Bytes!
+  holderAmount: BigInt!
+  treasuryAmount: BigInt!
+  curatorAmount: BigInt!
+  timestamp: BigInt!
+  transactionHash: Bytes!
+}

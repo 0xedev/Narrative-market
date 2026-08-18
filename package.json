@@ -7,11 +7,8 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "check:mechanics": "node scripts/check-mechanics.mjs",
-    "db:generate": "pnpm --filter @narrative/db prisma generate",
-    "db:push": "pnpm --filter @narrative/db prisma db push",
-    "indexer": "pnpm --filter @narrative/indexer dev"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": ["@prisma/client", "esbuild"]
+    "testnet:e2e": "node scripts/testnet-e2e.mjs",
+    "subgraph:codegen": "pnpm --dir subgraph codegen",
+    "subgraph:build": "pnpm --dir subgraph build"
   }
 }

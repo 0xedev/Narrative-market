@@ -15,6 +15,7 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
     uint256 public constant HALVING_PERIOD = 30 days;
     uint256 public constant INITIAL_EMISSION = 4 ether;
     uint256 public constant TAIL_EMISSION = 0.01 ether;
+    uint256 public constant MAX_URI_LENGTH = 2_048;
 
     NarrativeToken public immutable narr;
     uint256 public immutable emissionStart;
@@ -23,6 +24,8 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
     bytes32 public activeQuestionId;
     bytes32 public queuedQuestionId;
     address public queuedCurator;
+    string public activeQuestionUri;
+    string public queuedQuestionUri;
     uint64 public questionStart;
     uint64 public questionEnd;
     uint64 public lastTakeoverAt;
@@ -31,14 +34,14 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
 
     address public currentHolder;
     bytes32 public currentAnswerHash;
+    string public currentAnswerUri;
     uint256 public currentPrice;
     uint256 public floorPrice;
     uint256 public maxPrice;
     address public currentCurator;
     bool public carryoverAnswerRequired;
 
-    mapping(address => uint256) public pendingRewards;
-    mapping(address => uint256) public ethCredits;
+    mapping(bytes32 => bool) public proposedQuestionIds;
     mapping(bytes32 => mapping(bytes32 => uint256)) public answerHoldSeconds;
     mapping(bytes32 => bytes32) public leadingAnswer;
     mapping(bytes32 => address) public leadingHolder;
@@ -48,53 +51,101 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
     error InvalidAddress();
     error InvalidQuestion();
     error InvalidAnswer();
+    error InvalidUri();
+    error QuestionAlreadyProposed();
     error QuestionNotActive();
     error QuestionStillActive();
     error DeadlineExpired();
     error PriceTooHigh();
     error IncorrectPayment();
     error NotCurrentHolder();
-    error NoRewards();
     error NoQueuedQuestion();
     error InvalidPriceBounds();
+    error EpochMismatch();
+    error PayoutFailed(address recipient, uint256 amount);
 
+    event QuestionProposed(bytes32 indexed questionId, address indexed proposer, string questionUri, uint256 timestamp);
+    event QuestionQueued(bytes32 indexed questionId, address indexed curator, string questionUri);
+    event QuestionStarted(
+        bytes32 indexed questionId,
+        address indexed curator,
+        string questionUri,
+        uint256 startsAt,
+        uint256 endsAt,
+        uint256 floorPrice,
+        uint256 maxPrice
+    );
+    event QuestionRotated(
+        bytes32 indexed previousQuestionId,
+        bytes32 indexed newQuestionId,
+        address indexed carriedHolder,
+        string questionUri
+    );
+    event QuestionResolved(bytes32 indexed questionId, bytes32 indexed winningAnswerHash, address winningHolder, uint256 cumulativeHoldSeconds);
+    event CarryoverAnswerSubmitted(
+        bytes32 indexed questionId,
+        address indexed holder,
+        bytes32 indexed answerHash,
+        string answerUri,
+        uint256 timestamp
+    );
     event Takeover(
         bytes32 indexed questionId,
         address indexed newHolder,
         address indexed previousHolder,
         uint256 price,
         bytes32 answerHash,
+        string answerUri,
         uint256 timestamp
     );
-    event RewardsAccrued(bytes32 indexed questionId, address indexed holder, uint256 amount);
-    event Claimed(address indexed holder, uint256 amount);
-    event QuestionQueued(bytes32 indexed questionId, address indexed curator);
-    event QuestionRotated(bytes32 indexed previousQuestionId, bytes32 indexed newQuestionId, address indexed carriedHolder);
-    event QuestionResolved(bytes32 indexed questionId, bytes32 indexed winningAnswerHash, address winningHolder, uint256 cumulativeHoldSeconds);
-    event EthCredited(address indexed account, uint256 amount);
+    event RewardsMinted(bytes32 indexed questionId, address indexed holder, uint256 amount);
+    event PayoutDistributed(
+        bytes32 indexed questionId,
+        address indexed previousHolder,
+        address indexed treasury,
+        address curator,
+        uint256 holderAmount,
+        uint256 treasuryAmount,
+        uint256 curatorAmount
+    );
     event TreasuryUpdated(address indexed treasury);
 
-    constructor(address token, address treasury_) Ownable(msg.sender) {
-        if (token == address(0) || treasury_ == address(0)) revert InvalidAddress();
-        narr = NarrativeToken(token);
+    constructor(address treasury_) Ownable(msg.sender) {
+        if (treasury_ == address(0)) revert InvalidAddress();
+        narr = new NarrativeToken();
         treasury = treasury_;
         emissionStart = block.timestamp;
     }
 
-    function startFirstQuestion(bytes32 questionId, address curator_, uint256 duration, uint256 floor, uint256 maximum)
-        external
-        onlyOwner
-    {
-        if (activeQuestionId != bytes32(0) || questionId == bytes32(0) || curator_ == address(0)) revert InvalidQuestion();
-        _validatePrices(floor, maximum);
-        _startQuestion(questionId, curator_, duration, floor, maximum, bytes32(0));
+    function proposeQuestion(bytes32 questionId, string calldata questionUri) external whenNotPaused {
+        if (questionId == bytes32(0)) revert InvalidQuestion();
+        _validateUri(questionUri);
+        if (proposedQuestionIds[questionId]) revert QuestionAlreadyProposed();
+        proposedQuestionIds[questionId] = true;
+        emit QuestionProposed(questionId, msg.sender, questionUri, block.timestamp);
     }
 
-    function queueQuestion(bytes32 questionId, address curator_) external onlyOwner {
+    function startFirstQuestion(
+        bytes32 questionId,
+        address curator_,
+        string calldata questionUri,
+        uint256 duration,
+        uint256 floor,
+        uint256 maximum
+    ) external onlyOwner {
+        if (activeQuestionId != bytes32(0) || questionId == bytes32(0) || curator_ == address(0)) revert InvalidQuestion();
+        _validateUri(questionUri);
+        _validatePrices(floor, maximum);
+        _startQuestion(questionId, curator_, questionUri, duration, floor, maximum, address(0));
+    }
+
+    function queueQuestion(bytes32 questionId, address curator_, string calldata questionUri) external onlyOwner {
         if (questionId == bytes32(0) || curator_ == address(0)) revert InvalidQuestion();
+        _validateUri(questionUri);
         queuedQuestionId = questionId;
         queuedCurator = curator_;
-        emit QuestionQueued(questionId, curator_);
+        queuedQuestionUri = questionUri;
+        emit QuestionQueued(questionId, curator_, questionUri);
     }
 
     function rotateIfDue(uint256 duration, uint256 floor, uint256 maximum) external whenNotPaused {
@@ -112,52 +163,52 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
         address carried = currentHolder;
         bytes32 next = queuedQuestionId;
         address curator_ = queuedCurator;
+        string memory nextUri = queuedQuestionUri;
         queuedQuestionId = bytes32(0);
         queuedCurator = address(0);
-        _startQuestion(next, curator_, duration, floor, maximum, carried);
-        emit QuestionRotated(previousQuestion, next, carried);
+        queuedQuestionUri = "";
+        _startQuestion(next, curator_, nextUri, duration, floor, maximum, carried);
+        currentEpoch++;
+        emit QuestionRotated(previousQuestion, next, carried, nextUri);
     }
 
-    function submitCarryoverAnswer(bytes32 answerHash) external whenNotPaused {
+    function submitCarryoverAnswer(bytes32 answerHash, string calldata answerUri) external whenNotPaused {
         if (!carryoverAnswerRequired || msg.sender != currentHolder) revert NotCurrentHolder();
         if (answerHash == bytes32(0)) revert InvalidAnswer();
+        _validateUri(answerUri);
         currentAnswerHash = answerHash;
+        currentAnswerUri = answerUri;
         carryoverAnswerRequired = false;
         lastTakeoverAt = uint64(block.timestamp);
+        emit CarryoverAnswerSubmitted(activeQuestionId, msg.sender, answerHash, answerUri, block.timestamp);
     }
 
-    function takeThrone(bytes32 questionId, bytes32 answerHash, uint256 maxAcceptedPrice, uint256 deadline)
-        external
-        payable
-        nonReentrant
-        whenNotPaused
-        returns (uint256 price)
-    {
+    function takeThrone(
+        bytes32 questionId,
+        bytes32 answerHash,
+        string calldata answerUri,
+        uint64 expectedEpoch,
+        uint256 maxAcceptedPrice,
+        uint256 deadline
+    ) external payable nonReentrant whenNotPaused returns (uint256 price) {
+        if (expectedEpoch != currentEpoch) revert EpochMismatch();
         if (questionId != activeQuestionId || block.timestamp >= questionEnd) revert QuestionNotActive();
         if (answerHash == bytes32(0)) revert InvalidAnswer();
+        _validateUri(answerUri);
         if (block.timestamp > deadline) revert DeadlineExpired();
 
         price = getCurrentPrice();
         if (price > maxAcceptedPrice) revert PriceTooHigh();
-        if (msg.value != price) revert IncorrectPayment();
+        if (msg.value < price || msg.value > maxAcceptedPrice) revert IncorrectPayment();
 
+        _completeTakeover(answerHash, answerUri, price);
+    }
+
+    function _completeTakeover(bytes32 answerHash, string calldata answerUri, uint256 price) internal {
         _settleHolder();
         address previousHolder = currentHolder;
-        uint256 kingPayment = price * KING_BPS / BPS;
-        uint256 treasuryPayment = price * TREASURY_BPS / BPS;
-        uint256 curatorPayment = price - kingPayment - treasuryPayment;
-
-        if (previousHolder == address(0)) {
-            treasuryPayment += kingPayment;
-            kingPayment = 0;
-        } else {
-            ethCredits[previousHolder] += kingPayment;
-            emit EthCredited(previousHolder, kingPayment);
-        }
-        ethCredits[treasury] += treasuryPayment;
-        ethCredits[currentCurator] += curatorPayment;
-        emit EthCredited(treasury, treasuryPayment);
-        emit EthCredited(currentCurator, curatorPayment);
+        _distributePayout(price, previousHolder);
+        if (msg.value > price) _pay(msg.sender, msg.value - price);
 
         uint256 nextPrice = price * 2;
         if (nextPrice < floorPrice) nextPrice = floorPrice;
@@ -165,30 +216,30 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
 
         currentHolder = msg.sender;
         currentAnswerHash = answerHash;
+        currentAnswerUri = answerUri;
         currentPrice = nextPrice;
         lastTakeoverAt = uint64(block.timestamp);
         lastRewardAccrualAt = uint64(block.timestamp);
         currentEpoch++;
         carryoverAnswerRequired = false;
 
-        emit Takeover(activeQuestionId, msg.sender, previousHolder, price, answerHash, block.timestamp);
+        emit Takeover(activeQuestionId, msg.sender, previousHolder, price, answerHash, answerUri, block.timestamp);
     }
 
-    function claimRewards() external nonReentrant returns (uint256 amount) {
-        if (msg.sender == currentHolder) _accrueRewards();
-        amount = pendingRewards[msg.sender];
-        if (amount == 0) revert NoRewards();
-        pendingRewards[msg.sender] = 0;
-        narr.mint(msg.sender, amount);
-        emit Claimed(msg.sender, amount);
-    }
+    function _distributePayout(uint256 price, address previousHolder) internal {
+        uint256 holderPayment = price * KING_BPS / BPS;
+        uint256 treasuryPayment = price * TREASURY_BPS / BPS;
+        uint256 curatorPayment = price - holderPayment - treasuryPayment;
 
-    function withdrawEth() external nonReentrant {
-        uint256 amount = ethCredits[msg.sender];
-        if (amount == 0) revert NoRewards();
-        ethCredits[msg.sender] = 0;
-        (bool ok,) = payable(msg.sender).call{value: amount}("");
-        require(ok, "ETH_TRANSFER_FAILED");
+        if (previousHolder == address(0)) {
+            treasuryPayment += holderPayment;
+            holderPayment = 0;
+        } else {
+            _pay(previousHolder, holderPayment);
+        }
+        _pay(treasury, treasuryPayment);
+        _pay(currentCurator, curatorPayment);
+        emit PayoutDistributed(activeQuestionId, previousHolder, treasury, currentCurator, holderPayment, treasuryPayment, curatorPayment);
     }
 
     function getCurrentPrice() public view returns (uint256) {
@@ -203,14 +254,6 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
         return _rateAt(block.timestamp);
     }
 
-    function pendingReward(address holder) external view returns (uint256) {
-        uint256 amount = pendingRewards[holder];
-        if (holder == currentHolder && activeQuestionId != bytes32(0)) {
-            amount += _rewardsBetween(lastRewardAccrualAt, block.timestamp);
-        }
-        return amount;
-    }
-
     function setTreasury(address treasury_) external onlyOwner {
         if (treasury_ == address(0)) revert InvalidAddress();
         treasury = treasury_;
@@ -220,9 +263,19 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
     function pause() external onlyOwner { _pause(); }
     function unpause() external onlyOwner { _unpause(); }
 
-    function _startQuestion(bytes32 questionId, address curator_, uint256 duration, uint256 floor, uint256 maximum, address carriedHolder) internal {
+    function _startQuestion(
+        bytes32 questionId,
+        address curator_,
+        string memory questionUri,
+        uint256 duration,
+        uint256 floor,
+        uint256 maximum,
+        address carriedHolder
+    ) internal {
         if (duration == 0 || questionId == bytes32(0) || curator_ == address(0)) revert InvalidQuestion();
+        _validateUri(questionUri);
         activeQuestionId = questionId;
+        activeQuestionUri = questionUri;
         currentCurator = curator_;
         questionStart = uint64(block.timestamp);
         questionEnd = uint64(block.timestamp + duration);
@@ -231,9 +284,11 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
         currentPrice = floor;
         currentHolder = carriedHolder;
         currentAnswerHash = bytes32(0);
+        currentAnswerUri = "";
         lastTakeoverAt = uint64(block.timestamp);
         lastRewardAccrualAt = uint64(block.timestamp);
         carryoverAnswerRequired = carriedHolder != address(0);
+        emit QuestionStarted(questionId, curator_, questionUri, questionStart, questionEnd, floor, maximum);
     }
 
     function _settleHolder() internal {
@@ -241,7 +296,8 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
             lastRewardAccrualAt = uint64(block.timestamp);
             return;
         }
-        _accrueRewards();
+
+        _mintRewards();
         if (currentAnswerHash != bytes32(0)) {
             uint256 interval = block.timestamp - lastTakeoverAt;
             uint256 total = answerHoldSeconds[activeQuestionId][currentAnswerHash] + interval;
@@ -254,13 +310,19 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
         }
     }
 
-    function _accrueRewards() internal {
+    function _mintRewards() internal {
         uint256 amount = _rewardsBetween(lastRewardAccrualAt, block.timestamp);
         if (amount > 0) {
-            pendingRewards[currentHolder] += amount;
-            emit RewardsAccrued(activeQuestionId, currentHolder, amount);
+            narr.mint(currentHolder, amount);
+            emit RewardsMinted(activeQuestionId, currentHolder, amount);
         }
         lastRewardAccrualAt = uint64(block.timestamp);
+    }
+
+    function _pay(address recipient, uint256 amount) internal {
+        if (amount == 0) return;
+        (bool ok,) = payable(recipient).call{value: amount}("");
+        if (!ok) revert PayoutFailed(recipient, amount);
     }
 
     function _rewardsBetween(uint256 from, uint256 to) internal view returns (uint256 total) {
@@ -285,5 +347,8 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
         if (floor == 0 || maximum < floor) revert InvalidPriceBounds();
     }
 
-    receive() external payable {}
+    function _validateUri(string memory uri) internal pure {
+        uint256 length = bytes(uri).length;
+        if (length == 0 || length > MAX_URI_LENGTH) revert InvalidUri();
+    }
 }

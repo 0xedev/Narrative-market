@@ -11,9 +11,8 @@ contract Deploy is Script {
         address treasury = vm.envAddress("TREASURY_ADDRESS");
 
         vm.startBroadcast(deployerKey);
-        token = new NarrativeToken();
-        throne = new NarrativeThrone(address(token), treasury);
-        token.setMinter(address(throne));
+        throne = new NarrativeThrone(treasury);
+        token = NarrativeToken(address(throne.narr()));
         vm.stopBroadcast();
     }
 }

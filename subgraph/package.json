@@ -1,0 +1,13 @@
+{
+  "name": "@narrative/subgraph",
+  "private": true,
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy:node": "graph deploy --node http://localhost:8020 --ipfs http://localhost:5001 --version-label v1 narrative-markets"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.98.0",
+    "@graphprotocol/graph-ts": "^0.35.1"
+  }
+}

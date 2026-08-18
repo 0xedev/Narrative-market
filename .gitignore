@@ -2,11 +2,14 @@ node_modules
 .next
 dist
 out
+subgraph/build
+subgraph/generated
 coverage
 cache
 artifacts
 lib
 broadcast
+*.tsbuildinfo
 .env
 .env.*
 !.env.example

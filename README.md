@@ -8,8 +8,7 @@ The longest-held answer wins the day. This is a mindshare game, not a truth-reso
 
 - `contracts/` — Foundry contracts and tests.
 - `apps/web/` — Next.js frontend with the yellow/green visual system.
-- `packages/db/` — Prisma schema for questions, answers, events, and stats.
-- `services/indexer/` — Viem event indexer for Robinhood Chain.
+- `subgraph/` — The Graph schema and event mappings for questions, answers, events, and stats.
 - `design/` — Imagen-generated visual direction used before frontend implementation.
 
 ## Protocol defaults
@@ -27,20 +26,38 @@ The longest-held answer wins the day. This is a mindshare game, not a truth-reso
 
 ```bash
 pnpm install
-pnpm db:generate
 pnpm dev
 ```
 
-Copy `.env.example` to `.env.local` for the web app and configure the deployed contract address after testnet deployment.
+Copy `.env.example` to `apps/web/.env.local`, configure the deployed throne and subgraph addresses, and run the web app from the workspace root.
 
 ## Contracts
 
 ```bash
 cd contracts
-forge install OpenZeppelin/openzeppelin-contracts --no-commit
-forge install foundry-rs/forge-std --no-commit
-forge test -vvv
+forge install --no-git oz=OpenZeppelin/openzeppelin-contracts@v5.0.2
+forge install --no-git foundry-rs/forge-std
+forge test --fuzz-runs 1000 -vvv
 ```
 
-Deploy with a throwaway testnet key only. Never commit private keys.
+The throne deploys its immutable NARR token internally. Deploy with a throwaway testnet key only. Never commit private keys.
+
+The Foundry profile targets the Paris EVM because Robinhood Chain testnet does not support the Shanghai `PUSH0` opcode.
+
+## Subgraph
+
+Update `subgraph/subgraph.yaml` with the deployed throne address and start block, then run:
+
+```bash
+pnpm subgraph:codegen
+pnpm subgraph:build
+```
+
+Configure the resulting GraphQL endpoint as `NEXT_PUBLIC_SUBGRAPH_URL` for the web app.
+
+The Graph currently lists Robinhood Chain mainnet (`robinhood`, chain ID `4663`) as a supported network, but not Robinhood Chain testnet (`46630`). The testnet manifest therefore uses `robinhood-testnet` and must be deployed to a dedicated Graph Node for the pilot. If managed testnet support becomes available, update the manifest network identifier before deploying.
+
+For a local/dedicated Graph Node, start Graph Node and IPFS, update the contract address and start block, then run `pnpm --dir subgraph deploy:node` and point `NEXT_PUBLIC_SUBGRAPH_URL` at the node's GraphQL endpoint.
+
+The repository includes a testnet Graph Node stack in `infra/graph-node/docker-compose.yml`. Start it with `docker compose -f infra/graph-node/docker-compose.yml up -d`, create the `narrative-markets` deployment on port `8020`, deploy the generated subgraph, and use `http://localhost:8000/subgraphs/name/narrative-markets` locally. The Graph Node Postgres volume is indexing infrastructure only; contract state remains authoritative onchain.
 
