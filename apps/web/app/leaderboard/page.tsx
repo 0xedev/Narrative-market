@@ -1,7 +1,21 @@
 import Link from "next/link";
+import { querySubgraph } from "../../lib/subgraph";
 
-const rows = [["@OxKingOfTheNet", "17h 42m", "12", "4,812 NARR"], ["@WebWeaver", "12h 08m", "8", "3,104 NARR"], ["@NodeNomad", "08h 51m", "6", "2,218 NARR"], ["@PacketPioneer", "05h 12m", "4", "1,009 NARR"]];
+type HolderRow = { id: string; totalHeldSeconds: string; takeovers: string; wins: string; rewardsMinted: string };
 
-export default function LeaderboardPage() {
-  return <main className="shell"><header className="topbar"><Link className="brand" href="/">Narrative Markets</Link><nav className="nav"><Link href="/">♛ Home</Link><Link href="/history">◷ History</Link><Link className="active" href="/leaderboard">♜ Leaderboard</Link><Link href="/stats">⌁ My Stats</Link></nav></header><section className="content"><div className="eyebrow">The all-time arena</div><h1>Long hold. Loud answer.</h1><div className="panel standings" style={{ marginTop: 28 }}>{rows.map(([name, held, takeovers, mined], index) => <div className="standing" key={name}><div className="rank">{index + 1}</div><div className="mini-avatar">♛</div><div><div className="standing-name">{name}</div><div className="standing-answer">{takeovers} takeovers</div></div><div><div className="hold">{held}</div><div className="standing-answer">{mined}</div></div></div>)}</div></section></main>;
+function formatDuration(totalSeconds: number) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function shortAddress(address: string) {
+  return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}
+
+export default async function LeaderboardPage() {
+  const data = await querySubgraph<{ holders: HolderRow[] }>(`query Leaderboard { holders(first: 50, orderBy: totalHeldSeconds, orderDirection: desc) { id totalHeldSeconds takeovers wins rewardsMinted } }`);
+  const rows = data?.holders ?? [];
+  return <main className="shell"><header className="topbar"><Link className="brand" href="/">Narrative Markets</Link><nav className="nav"><Link href="/">♛ Home</Link><Link href="/history">◷ History</Link><Link className="active" href="/leaderboard">♜ Leaderboard</Link><Link href="/stats">⌁ My Stats</Link><Link href="/propose">＋ Propose</Link></nav></header><section className="content"><div className="eyebrow">The all-time arena</div><h1>Long hold. Loud answer.</h1><div className="panel standings" style={{ marginTop: 28 }}>{rows.length ? rows.map((row, index) => <div className="standing" key={row.id}><div className="rank">{index + 1}</div><div className="mini-avatar">♛</div><div><div className="standing-name">{shortAddress(row.id)}</div><div className="standing-answer">{row.takeovers} takeovers · {row.wins} wins</div></div><div><div className="hold">{formatDuration(Number(row.totalHeldSeconds))}</div><div className="standing-answer">{row.rewardsMinted} raw NARR</div></div></div>) : <div className="muted" style={{ padding: "18px 8px" }}>No indexed holders yet.</div>}</div></section></main>;
 }

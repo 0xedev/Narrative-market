@@ -14,9 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: foundry-rs/foundry-toolchain@v1
-      - run: forge install OpenZeppelin/openzeppelin-contracts --no-commit
-      - run: forge install foundry-rs/forge-std --no-commit
-      - run: forge test -vvv
+      - run: forge install --no-git oz=OpenZeppelin/openzeppelin-contracts@v5.0.2
+      - run: forge install --no-git foundry-rs/forge-std
+      - run: forge test --fuzz-runs 1000 -vvv
 
   web-and-services:
     runs-on: ubuntu-latest
@@ -31,4 +31,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile=false
       - run: pnpm --filter @narrative/web typecheck
-      - run: pnpm --filter @narrative/indexer typecheck
+      - run: pnpm --filter @narrative/web build
+      - run: pnpm subgraph:codegen
+      - run: pnpm subgraph:build

@@ -76,7 +76,8 @@ h1 { font-size: clamp(2.2rem, 5.2vw, 5.7rem); line-height: .9; letter-spacing: -
 .standing-name { font-weight: 800; font-size: .86rem; }
 .standing-answer { color: var(--muted); font-size: .74rem; margin-top: 3px; }
 .hold { color: var(--lime); font-weight: 900; font-size: .84rem; }
-.full-leaderboard { margin-top: 16px; width: 100%; background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 12px; font-weight: 750; }
+.full-leaderboard { display: block; margin-top: 16px; width: 100%; background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 12px; font-weight: 750; text-align: center; text-decoration: none; }
+.full-leaderboard:disabled, .takeover:disabled, .wallet:disabled { cursor: not-allowed; opacity: .55; }
 .notice { margin-top: 18px; padding: 18px; border: 1px solid rgba(163,255,18,.15); border-radius: 18px; color: var(--muted); background: rgba(163,255,18,.04); }
 .notice strong { color: var(--lime); display: block; margin-bottom: 5px; }
 .modal-backdrop { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 18px; background: rgba(0,0,0,.75); backdrop-filter: blur(12px); }

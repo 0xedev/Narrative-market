@@ -1,4 +1,9 @@
 packages:
   - apps/*
-  - packages/*
-  - services/*
+  - subgraph
+
+allowBuilds:
+  bufferutil: true
+  esbuild: true
+  keccak: true
+  utf-8-validate: true
