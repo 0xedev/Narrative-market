@@ -164,8 +164,23 @@ async function main() {
 
   const proposal1 = await write(holderWallet, "proposeQuestion", [q1, q1Uri]);
   const proposal2 = await write(holderWallet, "proposeQuestion", [q2, q2Uri]);
-  const start = await write(deployerWallet, "startFirstQuestion", [q1, deployer.address, q1Uri, duration, floor, maximum]);
-  const queue = await write(deployerWallet, "queueQuestion", [q2, deployer.address, q2Uri]);
+
+  const zeroQuestionId = "0x0000000000000000000000000000000000000000000000000000000000000000";
+  const existingQuestion = await read("activeQuestionId");
+  let start;
+  let queue;
+  if (existingQuestion === zeroQuestionId) {
+    start = await write(deployerWallet, "startFirstQuestion", [q1, deployer.address, q1Uri, duration, floor, maximum]);
+    queue = await write(deployerWallet, "queueQuestion", [q2, deployer.address, q2Uri]);
+  } else {
+    const existingEnd = Number(await read("questionEnd"));
+    const untilEnd = existingEnd - Math.floor(Date.now() / 1000) + 2;
+    if (untilEnd > 0) await waitFor(untilEnd);
+    queue = await write(deployerWallet, "queueQuestion", [q1, deployer.address, q1Uri]);
+    start = await write(deployerWallet, "rotateIfDue", [duration, floor, maximum]);
+    eventOrThrow(start, throneAbi, "QuestionRotated");
+    await write(deployerWallet, "queueQuestion", [q2, deployer.address, q2Uri]);
+  }
 
   let epoch = await read("currentEpoch");
   const firstTakeover = (await take(deployerWallet, q1, answer1Hash, answer1Uri, epoch)).receipt;

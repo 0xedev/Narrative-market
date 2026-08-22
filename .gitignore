@@ -7,11 +7,12 @@ subgraph/generated
 coverage
 cache
 artifacts
-lib
+/contracts/lib/
 broadcast
 *.tsbuildinfo
 .env
 .env.*
 !.env.example
+!apps/web/.env.production
 .DS_Store
 

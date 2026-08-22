@@ -6,6 +6,7 @@ import { keccak256, toBytes } from "viem";
 import { useAccount, useChainId, useWriteContract } from "wagmi";
 import { narrativeThroneAbi } from "../../lib/abi";
 import { createContentUri } from "../../lib/uri";
+import { activeChain } from "../../lib/chain";
 import { WalletButton } from "../../components/WalletButton";
 
 const contractAddress = process.env.NEXT_PUBLIC_NARRATIVE_THRONE_ADDRESS as `0x${string}` | undefined;
@@ -24,7 +25,7 @@ export default function ProposePage() {
     if (normalized.length < 8) return setError("Question is too short.");
     if (normalized.length > 120) return setError("Question must be 120 characters or fewer.");
     if (!address) return setError("Connect a wallet first.");
-    if (chainId !== 46630) return setError("Switch your wallet to Robinhood Chain testnet.");
+    if (chainId !== activeChain.id) return setError(`Switch your wallet to ${activeChain.name}.`);
     if (!contractAddress) return setError("Testnet contract address is not configured yet.");
     try {
       setStatus("Confirm the proposal in your wallet…");

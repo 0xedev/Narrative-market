@@ -22,6 +22,52 @@ The longest-held answer wins the day. This is a mindshare game, not a truth-reso
 - NARR emissions begin at 4 tokens per second, halve every 30 days, and stop decaying at 0.01 tokens per second.
 - The current holder carries into the next question, but must submit a fresh answer. The previous answer does not carry over.
 
+## Live deployments
+
+### Robinhood Chain mainnet (chain ID 4663)
+
+- NarrativeThrone: `0x3d683C4867b2ed61FDD37F5339C68A3d6fb17B29` (verified on Blockscout)
+- NarrativeToken (NARR): `0x72D76aC324914E0D9C50B1Da83FA6F941EE1137B`
+- Deployed at block `43063693` via `scripts/deploy-mainnet.sh`.
+
+### Robinhood Chain testnet (chain ID 46630)
+
+- NarrativeThrone: `0xd87fCf950760F9373E656387736f8EAfC3757dA2`
+- NarrativeToken (NARR): `0x3147400e2e7724818DaA5e96524aE46E543aB433`
+
+### Hosting
+
+- Frontend: Vercel (`apps/web`), configured through `apps/web/.env.production`.
+- Indexer proxy: Railway (`services/indexer`), a dependency-free GraphQL proxy that forwards
+  `POST /graphql` to the upstream Pinax endpoint configured via `SUBGRAPH_UPSTREAM_URL`
+  (optionally authenticated with `SUBGRAPH_API_KEY`). Health check at `/health`.
+- Subgraph indexing: Pinax hosts the Graph Node for Robinhood Chain mainnet. Point
+  `subgraph/subgraph.yaml` at the deployed throne address/start block, then run
+  `pnpm subgraph:build` and `pnpm --dir subgraph deploy:pinax` with `PINAX_NODE_URL` and
+  `PINAX_IPFS_URL` set from your Pinax account.
+
+## Security testing
+
+The contract suite includes an adversarial battery in addition to functional tests:
+
+- `contracts/test/NarrativeThroneAttack.t.sol` — reentrancy during payouts, donation extraction,
+  rejecting-king DoS and recovery via rotation, win attribution theft via answer copying,
+  double-mint prevention, emission bounds, long-dormancy settlement, and an ETH conservation fuzz
+  across randomized takeover sequences.
+- `contracts/test/NarrativeThroneInvariant.t.sol` — Foundry invariant suite: the throne never
+  custodies ETH, prices stay within `[floor, max]`, NARR supply is bounded by the emission cap,
+  epochs track state transitions, and settled holders always have answers.
+- `contracts/test/live/RhTestnetFork.t.sol` — fork tests against the deployed testnet contracts
+  (`RH_TESTNET_RPC_URL` must be set).
+- `scripts/testnet-e2e.mjs` — end-to-end protocol exercise against live testnet contracts.
+
+Run everything with:
+
+```bash
+cd contracts
+forge test --fuzz-runs 1000 -vvv
+```
+
 ## Local setup
 
 ```bash

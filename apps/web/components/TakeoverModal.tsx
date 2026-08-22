@@ -5,6 +5,7 @@ import { parseEther } from "viem";
 import { useAccount, useChainId, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { narrativeThroneAbi } from "../lib/abi";
 import { contentHash, createContentUri, normalizeAnswer } from "../lib/uri";
+import { activeChain } from "../lib/chain";
 
 const contractAddress = process.env.NEXT_PUBLIC_NARRATIVE_THRONE_ADDRESS as `0x${string}` | undefined;
 
@@ -38,7 +39,7 @@ export function TakeoverModal({
     if (!address) return setError("Connect a wallet first.");
     if (!contractAddress) return setError("Testnet contract address is not configured yet.");
     if (!questionId || expectedEpoch === undefined) return setError("The active question is not available yet.");
-    if (chainId !== 46630) return setError("Switch your wallet to Robinhood Chain testnet.");
+    if (chainId !== activeChain.id) return setError(`Switch your wallet to ${activeChain.name}.`);
 
     try {
       const normalized = normalizeAnswer(answer);
