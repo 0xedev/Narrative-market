@@ -10,5 +10,10 @@
     "testnet:e2e": "node scripts/testnet-e2e.mjs",
     "subgraph:codegen": "pnpm --dir subgraph codegen",
     "subgraph:build": "pnpm --dir subgraph build"
+  },
+  "devDependencies": {
+    "next": "^14.2.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }
