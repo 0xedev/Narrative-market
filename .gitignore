@@ -8,6 +8,7 @@ coverage
 cache
 artifacts
 /contracts/lib/
+/lib/
 broadcast
 *.tsbuildinfo
 .env

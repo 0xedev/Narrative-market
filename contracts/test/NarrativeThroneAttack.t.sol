@@ -82,7 +82,6 @@ contract NarrativeThroneAttackTest is Test {
     string constant A1_URI = "ipfs://a1";
 
     uint256 constant FLOOR = 0.001 ether;
-    uint256 constant MAX = 1 ether;
     uint256 constant DURATION = 1 days;
 
     function setUp() public {
@@ -91,7 +90,7 @@ contract NarrativeThroneAttackTest is Test {
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);
         vm.deal(eve, 100 ether);
-        throne.startFirstQuestion(q1, curator, Q1_URI, DURATION, FLOOR, MAX);
+        throne.startFirstQuestion(q1, curator, Q1_URI, DURATION, FLOOR);
     }
 
     function _take(address taker, bytes32 answerHash, uint64 epoch) internal {
@@ -158,7 +157,7 @@ contract NarrativeThroneAttackTest is Test {
 
         vm.warp(block.timestamp + DURATION + 1);
         throne.queueQuestion(q2, curator, Q2_URI);
-        throne.rotateIfDue(DURATION, FLOOR, MAX);
+        throne.rotateIfDue(DURATION, FLOOR);
         assertEq(throne.activeQuestionId(), q2, "rotation must bypass a rejecting king");
         assertEq(throne.questionResolved(q1), true);
     }
@@ -172,7 +171,7 @@ contract NarrativeThroneAttackTest is Test {
 
         vm.warp(block.timestamp + DURATION + 1);
         throne.queueQuestion(q2, curator, Q2_URI);
-        throne.rotateIfDue(DURATION, FLOOR, MAX);
+        throne.rotateIfDue(DURATION, FLOOR);
 
         assertEq(throne.leadingAnswer(q1), a1);
         assertEq(throne.leadingHolder(q1), eve, "answer copying lets last holder capture win attribution");
@@ -202,7 +201,7 @@ contract NarrativeThroneAttackTest is Test {
     function _startLongQuestion() internal {
         throne.queueQuestion(q2, curator, Q2_URI);
         vm.warp(block.timestamp + DURATION + 1);
-        throne.rotateIfDue(730 days, FLOOR, MAX);
+        throne.rotateIfDue(730 days, FLOOR);
     }
 
     function testEmissionsBoundedOverOneYear() public {

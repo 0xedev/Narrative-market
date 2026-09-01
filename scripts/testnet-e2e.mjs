@@ -159,7 +159,6 @@ async function main() {
   const answer2Uri = jsonUri("answer", answer2, answer2Hash);
   const answer3Uri = jsonUri("answer", answer3, answer3Hash);
   const floor = parseEther("0.00001");
-  const maximum = parseEther("0.001");
   const duration = 45n;
 
   const proposal1 = await write(holderWallet, "proposeQuestion", [q1, q1Uri]);
@@ -170,14 +169,14 @@ async function main() {
   let start;
   let queue;
   if (existingQuestion === zeroQuestionId) {
-    start = await write(deployerWallet, "startFirstQuestion", [q1, deployer.address, q1Uri, duration, floor, maximum]);
+    start = await write(deployerWallet, "startFirstQuestion", [q1, deployer.address, q1Uri, duration, floor]);
     queue = await write(deployerWallet, "queueQuestion", [q2, deployer.address, q2Uri]);
   } else {
     const existingEnd = Number(await read("questionEnd"));
     const untilEnd = existingEnd - Math.floor(Date.now() / 1000) + 2;
     if (untilEnd > 0) await waitFor(untilEnd);
     queue = await write(deployerWallet, "queueQuestion", [q1, deployer.address, q1Uri]);
-    start = await write(deployerWallet, "rotateIfDue", [duration, floor, maximum]);
+    start = await write(deployerWallet, "rotateIfDue", [duration, floor]);
     eventOrThrow(start, throneAbi, "QuestionRotated");
     await write(deployerWallet, "queueQuestion", [q2, deployer.address, q2Uri]);
   }
@@ -222,7 +221,7 @@ async function main() {
   const questionEnd = await read("questionEnd");
   const secondsUntilRotation = Number(questionEnd) - Math.floor(Date.now() / 1000) + 2;
   if (secondsUntilRotation > 0) await waitFor(secondsUntilRotation);
-  const rotation = await write(deployerWallet, "rotateIfDue", [duration, floor, maximum]);
+  const rotation = await write(deployerWallet, "rotateIfDue", [duration, floor]);
   eventOrThrow(rotation, throneAbi, "QuestionResolved");
   eventOrThrow(rotation, throneAbi, "QuestionRotated");
   const rotationReward = eventOrThrow(rotation, throneAbi, "RewardsMinted");

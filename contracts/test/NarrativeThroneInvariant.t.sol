@@ -26,7 +26,7 @@ contract ThroneHandler is Test {
         vm.warp(block.timestamp + (warpDelta % 45 minutes));
         if (block.timestamp >= throne.questionEnd()) {
             throne.queueQuestion(keccak256(abi.encode("q", nonce)), players[0], "ipfs://inv-q");
-            try throne.rotateIfDue(1 days, 0.001 ether, 1 ether) {
+            try throne.rotateIfDue(1 days, 0.001 ether) {
                 rotations++;
             } catch {}
             return;
@@ -62,7 +62,7 @@ contract NarrativeThroneInvariantTest is Test {
         throne = new NarrativeThrone(makeAddr("treasury"));
         token = NarrativeToken(address(throne.narr()));
         throne.transferOwnership(address(this));
-        throne.startFirstQuestion(keccak256("genesis"), makeAddr("curator"), "ipfs://genesis", 1 days, 0.001 ether, 1 ether);
+        throne.startFirstQuestion(keccak256("genesis"), makeAddr("curator"), "ipfs://genesis", 1 days, 0.001 ether);
         handler = new ThroneHandler(throne);
         targetContract(address(handler));
         bytes4[] memory selectors = new bytes4[](2);
@@ -75,12 +75,10 @@ contract NarrativeThroneInvariantTest is Test {
         assertEq(address(throne).balance, 0, "protocol must never hold user ETH");
     }
 
-    function invariant_priceAlwaysWithinBounds() public view {
+    function invariant_priceNeverFallsBelowFloor() public view {
         if (throne.activeQuestionId() == bytes32(0) || block.timestamp >= throne.questionEnd()) return;
         uint256 price = throne.getCurrentPrice();
         assertGe(price, throne.floorPrice());
-        assertLe(price, throne.maxPrice());
-        assertLe(throne.currentPrice(), throne.maxPrice());
     }
 
     function invariant_supplyBoundedByEmissionCap() public view {
