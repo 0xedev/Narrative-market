@@ -35,5 +35,62 @@ export default function StatsPage() {
     return () => { cancelled = true; };
   }, [address]);
 
-  return <main className="shell"><header className="topbar"><Link className="brand" href="/">Narrative Markets</Link><nav className="nav"><Link href="/">♛ Home</Link><Link href="/history">◷ History</Link><Link href="/leaderboard">♜ Leaderboard</Link><Link className="active" href="/stats">⌁ My Stats</Link><Link href="/propose">＋ Propose</Link></nav><WalletButton /></header><section className="content"><div className="eyebrow">Your position</div><h1>Make your answer last.</h1><div className="grid" style={{ marginTop: 28 }}><div className="panel throne-panel"><div className="price-label">NARR balance</div><div className="price" style={{ fontSize: "clamp(2.8rem, 6vw, 5rem)" }}>{balanceRead.data === undefined ? "—" : formatEther(balanceRead.data)}</div><div className="price-note">NARR is minted directly when your holder position is settled.</div><div style={{ marginTop: 22 }}><WalletButton /></div></div><div className="panel standings"><div className="section-head"><h2>Live stats</h2><span>Subgraph</span></div>{address && stats ? <><div className="notice"><strong>{stats.totalHeldSeconds} seconds held</strong>Accumulated hold time across indexed questions.</div><div className="notice"><strong>{stats.takeovers} takeovers · {stats.wins} wins</strong>Your onchain competition record.</div><div className="notice"><strong>{formatEther(BigInt(stats.rewardsMinted))} NARR emitted</strong>Rewards settled directly to your wallet.</div></> : <div className="notice"><strong>Connect a wallet</strong>Your indexed hold time, takeovers, wins, and NARR emissions will appear here.</div>}</div></div>{address && <div className="panel standings" style={{ marginTop: 18 }}><div className="section-head"><h2>Direct payout history</h2><span>ETH sent onchain</span></div>{payouts.length ? payouts.map((payout) => <div className="activity-item" key={payout.id}><b>{formatEther(BigInt(payout.holderAmount))} ETH</b> received · {new Date(Number(payout.timestamp) * 1000).toLocaleString()}</div>) : <div className="muted" style={{ marginTop: 14 }}>No direct holder payouts indexed yet.</div>}</div>}</section></main>;
+  return (
+    <section className="content">
+      <div className="eyebrow">Your position</div>
+      <h1>Make your answer last.</h1>
+      <div className="grid" style={{ marginTop: 28 }}>
+        <div className="panel throne-panel">
+          <div className="price-label">NARR balance</div>
+          <div className="price" style={{ fontSize: "clamp(2.4rem, 5.5vw, 4.2rem)" }}>
+            {balanceRead.data === undefined ? "—" : formatEther(balanceRead.data)}
+          </div>
+          <div className="price-note">NARR is minted directly when your holder position is settled.</div>
+          <div style={{ marginTop: 22 }}>
+            <WalletButton />
+          </div>
+        </div>
+        <div className="panel standings">
+          <div className="section-head">
+            <h2>Live stats</h2>
+            <span>Subgraph</span>
+          </div>
+          {address && stats ? (
+            <>
+              <div className="notice">
+                <strong>{stats.totalHeldSeconds} seconds held</strong>Accumulated hold time across indexed questions.
+              </div>
+              <div className="notice">
+                <strong>{stats.takeovers} takeovers · {stats.wins} wins</strong>Your onchain competition record.
+              </div>
+              <div className="notice">
+                <strong>{formatEther(BigInt(stats.rewardsMinted))} NARR emitted</strong>Rewards settled directly to your wallet.
+              </div>
+            </>
+          ) : (
+            <div className="notice">
+              <strong>Connect a wallet</strong>Your indexed hold time, takeovers, wins, and NARR emissions will appear here.
+            </div>
+          )}
+        </div>
+      </div>
+      {address && (
+        <div className="panel standings" style={{ marginTop: 18 }}>
+          <div className="section-head">
+            <h2>Direct payout history</h2>
+            <span>ETH sent onchain</span>
+          </div>
+          {payouts.length ? (
+            payouts.map((payout) => (
+              <div className="activity-item" key={payout.id}>
+                <b>{formatEther(BigInt(payout.holderAmount))} ETH</b> received · {new Date(Number(payout.timestamp) * 1000).toLocaleString()}
+              </div>
+            ))
+          ) : (
+            <div className="muted" style={{ marginTop: 14 }}>No direct holder payouts indexed yet.</div>
+          )}
+        </div>
+      )}
+    </section>
+  );
 }

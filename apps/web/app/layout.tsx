@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import { Navbar } from "../components/Navbar";
+import { Footnav } from "../components/Footnav";
 
 export const metadata: Metadata = {
   title: "Narrative Markets — Rule today",
@@ -11,8 +13,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          <div className="shell">
+            <Navbar />
+            {children}
+            <Footnav />
+          </div>
+        </Providers>
       </body>
     </html>
   );
 }
+

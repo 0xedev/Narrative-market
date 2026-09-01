@@ -40,5 +40,25 @@ export default function ProposePage() {
     }
   }
 
-  return <main className="shell"><header className="topbar"><Link className="brand" href="/">Narrative Markets</Link><nav className="nav"><Link href="/">♛ Home</Link><Link href="/history">◷ History</Link><Link href="/leaderboard">♜ Leaderboard</Link><Link href="/stats">⌁ My Stats</Link><Link className="active" href="/propose">＋ Propose</Link></nav><WalletButton /></header><section className="content"><div className="eyebrow">Onchain curator queue</div><h1>Ask a question worth fighting over.</h1><div className="panel modal" style={{ marginTop: 28 }}><p>Questions are published as onchain URIs and reviewed by the curator wallet before activation.</p><textarea className="answer-input" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={120} placeholder="What should everyone be arguing about tomorrow?" />{status && <p className="muted">{status}</p>}{error && <div className="error">{error}</div>}<button className="takeover" style={{ marginTop: 16 }} onClick={submit} disabled={isPending}>{isPending ? "Confirming…" : "Submit onchain"}</button></div></section></main>;
+  return (
+    <section className="content">
+      <div className="eyebrow">Onchain curator queue</div>
+      <h1>Ask a question worth fighting over.</h1>
+      <div className="panel modal" style={{ marginTop: 28 }}>
+        <p>Questions are published as onchain URIs and reviewed by the curator wallet before activation.</p>
+        <textarea
+          className="answer-input"
+          value={question}
+          onChange={(event) => setQuestion(event.target.value)}
+          maxLength={120}
+          placeholder="What should everyone be arguing about tomorrow?"
+        />
+        {status && <p className="muted">{status}</p>}
+        {error && <div className="error">{error}</div>}
+        <button className="takeover" style={{ marginTop: 16 }} onClick={submit} disabled={isPending}>
+          {isPending ? "Confirming…" : "Submit onchain"}
+        </button>
+      </div>
+    </section>
+  );
 }
