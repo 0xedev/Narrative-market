@@ -37,7 +37,6 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
     string public currentAnswerUri;
     uint256 public currentPrice;
     uint256 public floorPrice;
-    uint256 public maxPrice;
     address public currentCurator;
     bool public carryoverAnswerRequired;
 
@@ -72,8 +71,7 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
         string questionUri,
         uint256 startsAt,
         uint256 endsAt,
-        uint256 floorPrice,
-        uint256 maxPrice
+        uint256 floorPrice
     );
     event QuestionRotated(
         bytes32 indexed previousQuestionId,
@@ -130,13 +128,12 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
         address curator_,
         string calldata questionUri,
         uint256 duration,
-        uint256 floor,
-        uint256 maximum
+        uint256 floor
     ) external onlyOwner {
         if (activeQuestionId != bytes32(0) || questionId == bytes32(0) || curator_ == address(0)) revert InvalidQuestion();
         _validateUri(questionUri);
-        _validatePrices(floor, maximum);
-        _startQuestion(questionId, curator_, questionUri, duration, floor, maximum, address(0));
+        _validateFloor(floor);
+        _startQuestion(questionId, curator_, questionUri, duration, floor, address(0));
     }
 
     function queueQuestion(bytes32 questionId, address curator_, string calldata questionUri) external onlyOwner {
@@ -148,10 +145,10 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
         emit QuestionQueued(questionId, curator_, questionUri);
     }
 
-    function rotateIfDue(uint256 duration, uint256 floor, uint256 maximum) external whenNotPaused {
+    function rotateIfDue(uint256 duration, uint256 floor) external whenNotPaused {
         if (activeQuestionId == bytes32(0) || block.timestamp < questionEnd) revert QuestionStillActive();
         if (queuedQuestionId == bytes32(0)) revert NoQueuedQuestion();
-        _validatePrices(floor, maximum);
+        _validateFloor(floor);
 
         bytes32 previousQuestion = activeQuestionId;
         _settleHolder();
@@ -167,7 +164,7 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
         queuedQuestionId = bytes32(0);
         queuedCurator = address(0);
         queuedQuestionUri = "";
-        _startQuestion(next, curator_, nextUri, duration, floor, maximum, carried);
+        _startQuestion(next, curator_, nextUri, duration, floor, carried);
         currentEpoch++;
         emit QuestionRotated(previousQuestion, next, carried, nextUri);
     }
@@ -212,7 +209,6 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
 
         uint256 nextPrice = price * 2;
         if (nextPrice < floorPrice) nextPrice = floorPrice;
-        if (nextPrice > maxPrice) nextPrice = maxPrice;
 
         currentHolder = msg.sender;
         currentAnswerHash = answerHash;
@@ -269,7 +265,6 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
         string memory questionUri,
         uint256 duration,
         uint256 floor,
-        uint256 maximum,
         address carriedHolder
     ) internal {
         if (duration == 0 || questionId == bytes32(0) || curator_ == address(0)) revert InvalidQuestion();
@@ -280,7 +275,6 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
         questionStart = uint64(block.timestamp);
         questionEnd = uint64(block.timestamp + duration);
         floorPrice = floor;
-        maxPrice = maximum;
         currentPrice = floor;
         currentHolder = carriedHolder;
         currentAnswerHash = bytes32(0);
@@ -288,7 +282,7 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
         lastTakeoverAt = uint64(block.timestamp);
         lastRewardAccrualAt = uint64(block.timestamp);
         carryoverAnswerRequired = carriedHolder != address(0);
-        emit QuestionStarted(questionId, curator_, questionUri, questionStart, questionEnd, floor, maximum);
+        emit QuestionStarted(questionId, curator_, questionUri, questionStart, questionEnd, floor);
     }
 
     function _settleHolder() internal {
@@ -343,8 +337,8 @@ contract NarrativeThrone is Ownable, Pausable, ReentrancyGuard {
         if (rate < TAIL_EMISSION) rate = TAIL_EMISSION;
     }
 
-    function _validatePrices(uint256 floor, uint256 maximum) internal pure {
-        if (floor == 0 || maximum < floor) revert InvalidPriceBounds();
+    function _validateFloor(uint256 floor) internal pure {
+        if (floor == 0) revert InvalidPriceBounds();
     }
 
     function _validateUri(string memory uri) internal pure {

@@ -26,8 +26,8 @@ The longest-held answer wins the day. This is a mindshare game, not a truth-reso
 
 ### Robinhood Chain mainnet (chain ID 4663)
 
-- NarrativeThrone: `0x3d683C4867b2ed61FDD37F5339C68A3d6fb17B29` (verified on Blockscout)
-- NarrativeToken (NARR): `0x72D76aC324914E0D9C50B1Da83FA6F941EE1137B`
+- NarrativeThrone: `0x3953b9730A264C477c579B8dF7F84D30B013f99a` (uncapped mainnet deployment)
+- NarrativeToken (NARR): `0x8E7d6d9Ad21264d0fe18b6615380b371ed712C0F`
 - Deployed at block `43063693` via `scripts/deploy-mainnet.sh`.
 
 ### Robinhood Chain testnet (chain ID 46630)

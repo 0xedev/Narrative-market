@@ -6,9 +6,9 @@ dataSources:
     name: NarrativeThrone
     network: robinhood
     source:
-      address: "0x3d683C4867b2ed61FDD37F5339C68A3d6fb17B29"
+      address: "0x3953b9730A264C477c579B8dF7F84D30B013f99a"
       abi: NarrativeThrone
-      startBlock: 43063693
+      startBlock: 43499170
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -29,7 +29,7 @@ dataSources:
           handler: handleQuestionProposed
         - event: QuestionQueued(indexed bytes32,indexed address,string)
           handler: handleQuestionQueued
-        - event: QuestionStarted(indexed bytes32,indexed address,string,uint256,uint256,uint256,uint256)
+        - event: QuestionStarted(indexed bytes32,indexed address,string,uint256,uint256,uint256)
           handler: handleQuestionStarted
         - event: QuestionRotated(indexed bytes32,indexed bytes32,indexed address,string)
           handler: handleQuestionRotated

@@ -31,7 +31,7 @@ contract NarrativeThroneTest is Test {
         token = NarrativeToken(address(throne.narr()));
         vm.deal(alice, 10 ether);
         vm.deal(bob, 10 ether);
-        throne.startFirstQuestion(q1, curator, Q1_URI, 1 days, 0.001 ether, 0.1 ether);
+        throne.startFirstQuestion(q1, curator, Q1_URI, 1 days, 0.001 ether);
     }
 
     function testImmutableMinterAndFirstTakeover() public {
@@ -68,7 +68,7 @@ contract NarrativeThroneTest is Test {
 
         uint256 price = throne.getCurrentPrice();
         assertGe(price, throne.floorPrice());
-        assertLe(price, throne.maxPrice());
+        assertGe(price, throne.floorPrice());
 
         uint256 aliceBefore = alice.balance;
         uint256 treasuryBefore = treasury.balance;
@@ -81,17 +81,17 @@ contract NarrativeThroneTest is Test {
         assertEq(throne.currentEpoch(), 2);
     }
 
-    function testPriceDoublesAndCapsAtMaximum() public {
-        NarrativeThrone capped = new NarrativeThrone(treasury);
-        capped.startFirstQuestion(q1, curator, Q1_URI, 1 days, 0.001 ether, 0.003 ether);
+    function testPriceDoublesWithoutProtocolCap() public {
+        NarrativeThrone uncapped = new NarrativeThrone(treasury);
+        uncapped.startFirstQuestion(q1, curator, Q1_URI, 1 days, 0.001 ether);
 
         vm.prank(alice);
-        capped.takeThrone{value: 0.001 ether}(q1, a1, A1_URI, 0, 0.001 ether, block.timestamp + 1 hours);
-        assertEq(capped.currentPrice(), 0.002 ether);
+        uncapped.takeThrone{value: 0.001 ether}(q1, a1, A1_URI, 0, 0.001 ether, block.timestamp + 1 hours);
+        assertEq(uncapped.currentPrice(), 0.002 ether);
 
         vm.prank(bob);
-        capped.takeThrone{value: 0.002 ether}(q1, a2, A2_URI, 1, 0.002 ether, block.timestamp + 1 hours);
-        assertEq(capped.currentPrice(), 0.003 ether);
+        uncapped.takeThrone{value: 0.002 ether}(q1, a2, A2_URI, 1, 0.002 ether, block.timestamp + 1 hours);
+        assertEq(uncapped.currentPrice(), 0.004 ether);
     }
 
     function testDeadlineAndMaximumAcceptedPriceAreEnforced() public {
@@ -140,7 +140,7 @@ contract NarrativeThroneTest is Test {
     function testRewardsCrossHalvingBoundaryAndMintInSettlementTransaction() public {
         NarrativeThrone halving = new NarrativeThrone(treasury);
         NarrativeToken halvingToken = NarrativeToken(address(halving.narr()));
-        halving.startFirstQuestion(q1, curator, Q1_URI, 60 days, 0.001 ether, 0.1 ether);
+        halving.startFirstQuestion(q1, curator, Q1_URI, 60 days, 0.001 ether);
 
         vm.prank(alice);
         halving.takeThrone{value: 0.001 ether}(q1, a1, A1_URI, 0, 0.001 ether, block.timestamp + 1 hours);
@@ -159,7 +159,7 @@ contract NarrativeThroneTest is Test {
         throne.takeThrone{value: 0.001 ether}(q1, a1, A1_URI, 0, 0.001 ether, block.timestamp + 1 hours);
         throne.queueQuestion(q2, curator, Q2_URI);
         vm.warp(block.timestamp + 1 days);
-        throne.rotateIfDue(1 days, 0.001 ether, 0.1 ether);
+        throne.rotateIfDue(1 days, 0.001 ether);
 
         assertEq(throne.currentHolder(), alice);
         assertTrue(throne.carryoverAnswerRequired());
@@ -223,11 +223,11 @@ contract NarrativeThroneTest is Test {
 
     function testQuestionRotationRejectsInvalidTransitions() public {
         vm.expectRevert(NarrativeThrone.QuestionStillActive.selector);
-        throne.rotateIfDue(1 days, 0.001 ether, 0.1 ether);
+        throne.rotateIfDue(1 days, 0.001 ether);
 
         vm.warp(block.timestamp + 1 days);
         vm.expectRevert(NarrativeThrone.NoQueuedQuestion.selector);
-        throne.rotateIfDue(1 days, 0.001 ether, 0.1 ether);
+        throne.rotateIfDue(1 days, 0.001 ether);
     }
 
     function testQuestionProposalRejectsDuplicates() public {

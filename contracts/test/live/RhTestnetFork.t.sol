@@ -33,12 +33,11 @@ contract RhTestnetForkTest is Test {
         assertTrue(THRONE.owner() != address(0), "owner must be set");
     }
 
-    function testLivePriceWithinBounds() public view {
+    function testLivePriceNeverFallsBelowFloor() public view {
         assertTrue(forked);
         if (THRONE.activeQuestionId() == bytes32(0)) return;
         uint256 price = THRONE.getCurrentPrice();
         assertGe(price, THRONE.floorPrice());
-        assertLe(price, THRONE.maxPrice());
     }
 
     function testLiveBalanceConservation() public view {
